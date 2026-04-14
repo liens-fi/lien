@@ -1,0 +1,17 @@
+[package]
+name = "lien-hook-library"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Six standard hooks for the Lien Solana lending hooks framework."
+
+[lib]
+name = "lien_hook_library"
+path = "src/lib.rs"
+
+[dependencies]
+lien-hook-runtime = { path = "../hook-runtime" }
+borsh.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
