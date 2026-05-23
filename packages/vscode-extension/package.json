@@ -1,0 +1,57 @@
+{
+  "name": "lien-vscode",
+  "displayName": "Lien — Solana Lending Hooks",
+  "description": "Visualise hook compositions as knot diagrams, simulate lifecycle events, and deploy with the Lien CLI from inside VS Code.",
+  "version": "0.1.0",
+  "publisher": "liens-fi",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/liens-fi/lien",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": ["Other", "Debuggers", "Visualization"],
+  "keywords": ["solana", "anchor", "lending", "marginfi", "kamino", "solend", "hooks"],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onCommand:lien.openDesigner",
+    "onCommand:lien.simulate",
+    "onCommand:lien.deployPlan",
+    "workspaceContains:**/Anchor.toml"
+  ],
+  "contributes": {
+    "commands": [
+      { "command": "lien.openDesigner", "title": "Lien: Open Hook Designer" },
+      { "command": "lien.simulate", "title": "Lien: Simulate Current Composition" },
+      { "command": "lien.deployPlan", "title": "Lien: Show Deploy Plan" }
+    ],
+    "configuration": {
+      "title": "Lien",
+      "properties": {
+        "lien.defaultPool": {
+          "type": "string",
+          "default": "SOL-USDC",
+          "description": "Default pool label for simulations."
+        },
+        "lien.cluster": {
+          "type": "string",
+          "enum": ["localnet", "devnet", "mainnet"],
+          "default": "localnet"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "vscode:prepublish": "npm run build",
+    "package": "vsce package --out lien-vscode-0.1.0.vsix"
+  },
+  "dependencies": {
+    "@liens/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.7.2"
+  }
+}
