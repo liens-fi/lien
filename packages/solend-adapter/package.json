@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@solendprotocol/solend-sdk": "^0.13.0",
+    "@solendprotocol/solend-sdk": "^0.14.27",
     "@solana/web3.js": "^1.95.4",
     "bn.js": "^5.2.1"
   },
