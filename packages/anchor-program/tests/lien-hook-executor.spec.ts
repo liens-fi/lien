@@ -16,7 +16,7 @@ describe("lien_hook_executor", () => {
 
   it("derives the program id from declare_id! in lib.rs", () => {
     expect(program.programId.toBase58()).to.equal(
-      "LienH00kExecutor1111111111111111111111111111",
+      "5yNMqcyZsGQJk4xvw4jjvoRBSnGs8mgramEa3HQe5faD",
     );
   });
 

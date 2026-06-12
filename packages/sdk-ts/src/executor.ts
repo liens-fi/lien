@@ -15,7 +15,7 @@ import {
 import type { Composition } from "./composition.js";
 
 export const LIEN_EXECUTOR_ID = new PublicKey(
-  "LienH00kExecutor1111111111111111111111111111",
+  "5yNMqcyZsGQJk4xvw4jjvoRBSnGs8mgramEa3HQe5faD",
 );
 
 export interface ExecutorClientOptions {
