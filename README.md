@@ -10,7 +10,19 @@
 [![Anchor](https://img.shields.io/badge/Anchor-0.31-9D6BFF?style=flat-square)](https://www.anchor-lang.com)
 [![Rust](https://img.shields.io/badge/Rust-1.79-E63946?style=flat-square)](https://www.rust-lang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-5BC0EB?style=flat-square)](https://www.typescriptlang.org)
-[![Solana](https://img.shields.io/badge/Solana-mainnet-FFD976?style=flat-square)](https://solana.com)
+[![Solana](https://img.shields.io/badge/Solana-devnet-FFD976?style=flat-square)](https://solana.com)
+[![Program](https://img.shields.io/badge/devnet%20program-5yNMqcyZsGQJk4xvw4jjvoRBSnGs8mgramEa3HQe5faD-00FFE5?style=flat-square)](https://explorer.solana.com/address/5yNMqcyZsGQJk4xvw4jjvoRBSnGs8mgramEa3HQe5faD?cluster=devnet)
+
+## Live
+
+| Resource | Value |
+|---------|-------|
+| Site | [liens.fi](https://liens.fi) |
+| Executor program (devnet) | `5yNMqcyZsGQJk4xvw4jjvoRBSnGs8mgramEa3HQe5faD` |
+| Initial deploy tx | [`3MSW…dG4j`](https://explorer.solana.com/tx/3MSWvHsCqZ2aUTQeyqwEBAAUr8zeH2vUtGLM6HfLRjYgSxwRKwro4UyDGrQX7jgAfkja437mFs4Lk8RiyWKYdG4j?cluster=devnet) |
+| IDL | [`idl/lien_hook_executor.json`](idl/lien_hook_executor.json) |
+| Anchor | 0.31.1 |
+| Mainnet | not deployed yet — operator-driven via `lien deploy --cluster mainnet` |
 
 LIEN is a Solana-first hook framework for lending: an Anchor 0.31 executor program plus a runtime, three adapters (Marginfi v2, Kamino Lend, Solend), a six-hook standard library, an SDK, a CLI, and a VS Code extension. Pool operators bind a list of hooks (a Composition) to a pool and the on-chain executor runs them at every lifecycle event.
 
