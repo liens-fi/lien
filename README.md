@@ -5,7 +5,7 @@
 [![Site](https://img.shields.io/badge/site-liens.fi-D4AF37?style=flat-square)](https://liens.fi)
 [![Docs](https://img.shields.io/badge/docs-liens.fi%2Fdocs-D4AF37?style=flat-square)](https://liens.fi/docs)
 [![X](https://img.shields.io/badge/X-%40liens__fi-3D2817?style=flat-square)](https://x.com/liens_fi)
-[![Build](https://img.shields.io/badge/build-passing-7CB07A?style=flat-square)](#)
+[![CI](https://github.com/liens-fi/lien/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/liens-fi/lien/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-D4AF37?style=flat-square)](LICENSE)
 [![Anchor](https://img.shields.io/badge/Anchor-0.31-9D6BFF?style=flat-square)](https://www.anchor-lang.com)
 [![Rust](https://img.shields.io/badge/Rust-1.79-E63946?style=flat-square)](https://www.rust-lang.org)
