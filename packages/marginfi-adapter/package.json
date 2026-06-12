@@ -12,7 +12,7 @@
     "test": "node --test --import tsx src/**/*.test.ts"
   },
   "dependencies": {
-    "@mrgnlabs/marginfi-client-v2": "^4.0.0",
+    "@mrgnlabs/marginfi-client-v2": "^6.4.2",
     "@mrgnlabs/mrgn-common": "^1.7.0",
     "@solana/web3.js": "^1.95.4",
     "bn.js": "^5.2.1"
