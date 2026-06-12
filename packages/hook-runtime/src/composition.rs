@@ -222,3 +222,94 @@ mod tests {
         assert!(matches!(trace.entries[0].outcome, Outcome::Skipped));
     }
 }
+
+#[cfg(test)]
+mod extra_tests {
+    use std::sync::Arc;
+
+    use super::*;
+    use crate::event::{AdapterKind, LifecycleEvent, LifecycleEventKind, MarketSnapshot, PositionSnapshot};
+    use crate::hook::{HookFlag, HookFlags, HookMeta, SideEffect};
+
+    struct Static {
+        meta: HookMeta,
+        decision: HookDecision,
+    }
+    impl Hook for Static {
+        fn meta(&self) -> &HookMeta { &self.meta }
+        fn evaluate(&self, _ctx: &HookContext<'_>) -> HookDecision { self.decision.clone() }
+    }
+
+    fn meta(name: &str) -> HookMeta {
+        HookMeta {
+            name: name.into(),
+            version: "0.1.0".into(),
+            author: "test".into(),
+            flags: HookFlags::empty().with(HookFlag::BeforeBorrow),
+            description: "".into(),
+        }
+    }
+
+    fn evt() -> LifecycleEvent {
+        LifecycleEvent {
+            kind: LifecycleEventKind::BeforeBorrow,
+            adapter: AdapterKind::Marginfi,
+            position: PositionSnapshot {
+                owner: [0; 32], collateral_mint: [1; 32], debt_mint: [2; 32],
+                collateral_amount: 100, debt_amount: 0,
+                ltv_bps: 0, liquidation_threshold_bps: 0,
+            },
+            market: MarketSnapshot {
+                slot: 1, timestamp: 0, oracle_points: vec![],
+                realised_vol_bps: 0, utilisation_bps: 0,
+            },
+            payload: vec![],
+        }
+    }
+
+    #[test]
+    fn single_reject_halts_chain() {
+        let comp = CompositionBuilder::new()
+            .add(1, Arc::new(Static { meta: meta("a"), decision: HookDecision::Accept }))
+            .add(2, Arc::new(Static { meta: meta("b"), decision: HookDecision::Reject("no".into()) }))
+            .add(3, Arc::new(Static { meta: meta("c"), decision: HookDecision::Accept }))
+            .build()
+            .unwrap();
+        let err = comp.execute(&evt()).err().unwrap();
+        match err {
+            CompositionError::Rejected(name, reason) => {
+                assert_eq!(name, "b");
+                assert_eq!(reason, "no");
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
+    fn side_effects_accumulate_in_order() {
+        let comp = CompositionBuilder::new()
+            .add(1, Arc::new(Static {
+                meta: meta("a"),
+                decision: HookDecision::AcceptWith(SideEffect::OverrideMaxLtvBps(5_000)),
+            }))
+            .add(2, Arc::new(Static {
+                meta: meta("b"),
+                decision: HookDecision::AcceptWith(SideEffect::OverrideRateBps(700)),
+            }))
+            .build()
+            .unwrap();
+        let trace = comp.execute(&evt()).unwrap();
+        assert_eq!(trace.side_effects.len(), 2);
+        assert_eq!(trace.side_effects[0].0, "a");
+        assert_eq!(trace.side_effects[1].0, "b");
+    }
+
+    #[test]
+    fn budget_rejects_more_than_eight_hooks() {
+        let mut b = CompositionBuilder::new();
+        for i in 0..9u16 {
+            b = b.add(i, Arc::new(Static { meta: meta("x"), decision: HookDecision::Accept }));
+        }
+        assert!(matches!(b.build().err(), Some(CompositionError::BudgetExceeded(_))));
+    }
+}

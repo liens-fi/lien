@@ -2,7 +2,7 @@
 
 ## Reporting
 
-If you find a vulnerability in the hook executor, the runtime, or any of the adapters, do not open a public issue. Email `security@liens.fi` with the following:
+If you find a vulnerability in the hook executor, the runtime, or any of the adapters, do **not** open a public issue. Submit a **GitHub Private Vulnerability Report** via the Security tab of this repository (Security → Report a vulnerability). Include the following:
 
 - Affected component and commit hash.
 - Reproduction steps or a proof-of-concept.

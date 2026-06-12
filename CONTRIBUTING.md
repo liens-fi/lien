@@ -68,7 +68,7 @@ Plain English. Short. Imperative or descriptive — both are fine. Don't prefix 
 
 ## PR review
 
-Two reviewers from the core authors. CI must pass. New hooks need at least one unit test that covers the rejection path and one that covers the side-effect path.
+Maintainer review required. CI must pass. New hooks need at least one unit test that covers the rejection path and one that covers the side-effect path.
 
 ## Security disclosures
 

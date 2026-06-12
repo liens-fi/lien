@@ -136,3 +136,45 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod extra_tests {
+    use super::*;
+    use lien_hook_runtime::event::{
+        AdapterKind, LifecycleEvent, MarketSnapshot, OraclePoint, PositionSnapshot,
+    };
+
+    fn evt(kind: LifecycleEventKind, oracle: Option<OraclePoint>) -> LifecycleEvent {
+        let collateral_mint = [7u8; 32];
+        LifecycleEvent {
+            kind, adapter: AdapterKind::Marginfi,
+            position: PositionSnapshot {
+                owner: [1; 32], collateral_mint, debt_mint: [3; 32],
+                collateral_amount: 1_000_000_000, debt_amount: 500_000_000,
+                ltv_bps: 5_000, liquidation_threshold_bps: 8_500,
+            },
+            market: MarketSnapshot {
+                slot: 100, timestamp: 0,
+                oracle_points: oracle.map(|p| vec![p]).unwrap_or_default(),
+                realised_vol_bps: 0, utilisation_bps: 0,
+            },
+            payload: vec![],
+        }
+    }
+
+    #[test]
+    fn non_lifecycle_event_passes_through() {
+        let h = AutoHedge::new(8_000_000_000, 5_000, [42; 32]);
+        let e = evt(LifecycleEventKind::BeforeRepay, None);
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        assert_eq!(h.evaluate(&ctx), HookDecision::Accept);
+    }
+
+    #[test]
+    fn accepts_when_no_oracle_data_for_collateral() {
+        let h = AutoHedge::new(8_000_000_000, 5_000, [42; 32]);
+        let e = evt(LifecycleEventKind::AfterDeposit, None);
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        assert_eq!(h.evaluate(&ctx), HookDecision::Accept);
+    }
+}

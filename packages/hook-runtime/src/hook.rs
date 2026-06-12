@@ -137,3 +137,35 @@ mod tests {
         assert!(!f.matches_event(LifecycleEventKind::BeforeLiquidate));
     }
 }
+
+#[cfg(test)]
+mod extra_tests {
+    use super::*;
+
+    #[test]
+    fn flags_or_compose_multiple_lifecycles() {
+        let f = HookFlags::empty()
+            .with(HookFlag::BeforeBorrow)
+            .with(HookFlag::AfterBorrow)
+            .with(HookFlag::AfterRepay);
+        assert!(f.matches_event(LifecycleEventKind::BeforeBorrow));
+        assert!(f.matches_event(LifecycleEventKind::AfterBorrow));
+        assert!(f.matches_event(LifecycleEventKind::AfterRepay));
+        assert!(!f.matches_event(LifecycleEventKind::BeforeDeposit));
+    }
+
+    #[test]
+    fn capability_flags_independent_of_lifecycle() {
+        let f = HookFlags::empty().with(HookFlag::MutatePayload).with(HookFlag::UsesOracle);
+        assert!(f.contains(HookFlag::MutatePayload));
+        assert!(f.contains(HookFlag::UsesOracle));
+        // no lifecycle bit set
+        for k in [
+            LifecycleEventKind::BeforeDeposit,
+            LifecycleEventKind::AfterRepay,
+            LifecycleEventKind::BeforeLiquidate,
+        ] {
+            assert!(!f.matches_event(k));
+        }
+    }
+}

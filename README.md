@@ -7,7 +7,7 @@
 [![X](https://img.shields.io/badge/X-%40liens__fi-3D2817?style=flat-square)](https://x.com/liens_fi)
 [![CI](https://github.com/liens-fi/lien/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/liens-fi/lien/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-D4AF37?style=flat-square)](LICENSE)
-[![Anchor](https://img.shields.io/badge/Anchor-0.31-9D6BFF?style=flat-square)](https://www.anchor-lang.com)
+[![Anchor](https://img.shields.io/badge/Anchor-0.31.1-9D6BFF?style=flat-square)](https://www.anchor-lang.com)
 [![Rust](https://img.shields.io/badge/Rust-1.79-E63946?style=flat-square)](https://www.rust-lang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-5BC0EB?style=flat-square)](https://www.typescriptlang.org)
 [![Solana](https://img.shields.io/badge/Solana-devnet-FFD976?style=flat-square)](https://solana.com)
@@ -24,7 +24,7 @@
 | Anchor | 0.31.1 |
 | Mainnet | not deployed yet — operator-driven via `lien deploy --cluster mainnet` |
 
-LIEN is a Solana-first hook framework for lending: an Anchor 0.31 executor program plus a runtime, three adapters (Marginfi v2, Kamino Lend, Solend), a six-hook standard library, an SDK, a CLI, and a VS Code extension. Pool operators bind a list of hooks (a Composition) to a pool and the on-chain executor runs them at every lifecycle event.
+LIEN is a Solana-first hook framework for lending: an Anchor 0.31.1 executor program plus a runtime, three adapters (Marginfi v2, Kamino Lend, Solend), a six-hook standard library, an SDK, a CLI, and a VS Code extension. Pool operators bind a list of hooks (a Composition) to a pool and the on-chain executor runs them at every lifecycle event.
 
 The metaphor is rigging: each rope is a hook, each knot is a Composition. Tie carefully, retie at any time.
 
@@ -68,14 +68,14 @@ flowchart LR
 
 ## The six standard knots
 
-| Hook | Knot | Lifecycle | One line |
-|------|------|----------|---------|
-| `DynamicLTV` | slip | beforeBorrow, afterDeposit | Tightens max LTV as realised volatility climbs. |
-| `TimeTriggerLiq` | timer hitch | beforeLiquidate | Bounds liquidations to operator windows; delays under stale oracle. |
-| `WhitelistBorrow` | lock | beforeBorrow | Restricts new debt to a registered allowlist. |
-| `AntiMEVLiq` | double bowline | beforeLiquidate | Delays liquidations and (optionally) reserves them for known keepers. |
-| `AutoHedge` | double helix | afterBorrow, afterDeposit | Opens a Drift perp short when collateral crosses a trigger band. |
-| `ReputationRate` | rolling hitch | beforeBorrow | Discounts borrow rate against on-chain repayment reputation. |
+| | Hook | Knot | Lifecycle | One line |
+|---|------|------|----------|---------|
+| <img src="assets/knot-dynamic-ltv.svg" alt="" width="40"> | `DynamicLTV` | slip | beforeBorrow, afterDeposit | Tightens max LTV as realised volatility climbs. |
+| <img src="assets/knot-time-trigger.svg" alt="" width="40"> | `TimeTriggerLiq` | timer hitch | beforeLiquidate | Bounds liquidations to operator windows; delays under stale oracle. |
+| <img src="assets/knot-whitelist-borrow.svg" alt="" width="40"> | `WhitelistBorrow` | lock | beforeBorrow | Restricts new debt to a registered allowlist. |
+| <img src="assets/knot-anti-mev.svg" alt="" width="40"> | `AntiMEVLiq` | double bowline | beforeLiquidate | Delays liquidations and (optionally) reserves them for known keepers. |
+| <img src="assets/knot-auto-hedge.svg" alt="" width="40"> | `AutoHedge` | double helix | afterBorrow, afterDeposit | Opens a Drift perp short when collateral crosses a trigger band. |
+| <img src="assets/knot-reputation-rate.svg" alt="" width="40"> | `ReputationRate` | rolling hitch | beforeBorrow | Discounts borrow rate against on-chain repayment reputation. |
 
 Each is a small Rust crate under `packages/hook-library`. They are wired through the runtime in `packages/hook-runtime` and registered with the executor program in `packages/anchor-program`.
 
@@ -84,7 +84,7 @@ Each is a small Rust crate under `packages/hook-library`. They are wired through
 ```
 packages/
   hook-runtime/       Rust crate — lifecycle types, Composition + Simulator, ReputationProvider trait
-  anchor-program/     Anchor 0.31 program lien-hook-executor (Pool, Composition, HookListing PDAs)
+  anchor-program/     Anchor 0.31.1 program lien-hook-executor (Pool, Composition, HookListing PDAs)
   hook-library/       Six standard hooks (slip, timer, lock, bowline, helix, rolling)
   marginfi-adapter/   Marginfi v2 client wrapper -> normalised LifecycleEvent
   kamino-adapter/     Kamino Lend market loader -> normalised LifecycleEvent
@@ -101,15 +101,32 @@ docs/
   security.md         Audit scope, mainnet deploy gates, listing manifest checks
 ```
 
+## Requirements
+
+- Rust 1.79+ (`rustup install stable`)
+- Node 20+
+- **pnpm 9+** (enable via `corepack enable`) — the workspace uses `workspace:*` deps that npm/yarn cannot resolve
+- Solana CLI 1.18+ and Anchor 0.31.1 (only if you want to build the on-chain program)
+
 ## Quick start
+
+The web app (`liens.fi`) is deployed from a separate repository — this repo
+contains the Rust runtime, the Anchor program, and the TypeScript SDK + tooling.
 
 ```bash
 git clone https://github.com/liens-fi/lien
 cd lien
+
+# Rust crates (host-target tests)
+cargo test -p lien-hook-runtime -p lien-hook-library
+
+# Anchor program (needs solana + anchor 0.31.1)
+anchor build
+
+# TypeScript packages (uses pnpm workspaces; npm/yarn won't resolve workspace:* deps)
+corepack enable
 pnpm install
-pnpm dev          # serve apps/web
-cargo build       # build the Rust crates
-anchor build      # build the Anchor program
+pnpm -r typecheck
 ```
 
 ### Use the SDK

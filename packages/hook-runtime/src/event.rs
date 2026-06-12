@@ -231,3 +231,56 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod extra_tests {
+    use super::*;
+
+    fn dummy_market() -> MarketSnapshot {
+        MarketSnapshot {
+            slot: 1_000,
+            timestamp: 0,
+            oracle_points: vec![
+                OraclePoint { mint: [1; 32], price_e8: 12_345, confidence_e8: 10, slot: 950 },
+                OraclePoint { mint: [2; 32], price_e8: 6_789,  confidence_e8: 10, slot: 980 },
+            ],
+            realised_vol_bps: 800,
+            utilisation_bps: 6_000,
+        }
+    }
+
+    #[test]
+    fn price_of_returns_first_match() {
+        let m = dummy_market();
+        assert_eq!(m.price_of(&[1; 32]), Some(12_345));
+        assert_eq!(m.price_of(&[2; 32]), Some(6_789));
+    }
+
+    #[test]
+    fn slots_since_known_and_unknown() {
+        let m = dummy_market();
+        assert_eq!(m.slots_since(&[1; 32]), Some(50));
+        assert_eq!(m.slots_since(&[9; 32]), None);
+    }
+
+    #[test]
+    fn health_factor_when_below_threshold() {
+        let p = PositionSnapshot {
+            owner: [0; 32], collateral_mint: [1; 32], debt_mint: [2; 32],
+            collateral_amount: 1_000, debt_amount: 800,
+            ltv_bps: 8_000, liquidation_threshold_bps: 9_000,
+        };
+        // 9000 * 10000 / 8000 = 11_250 — still healthy
+        assert_eq!(p.health_factor_bps(), 11_250);
+    }
+
+    #[test]
+    fn adapter_kinds_have_distinct_program_ids() {
+        let m = AdapterKind::Marginfi.program_id();
+        let k = AdapterKind::Kamino.program_id();
+        let s = AdapterKind::Solend.program_id();
+        assert_ne!(m, k);
+        assert_ne!(k, s);
+        assert_ne!(m, s);
+    }
+}

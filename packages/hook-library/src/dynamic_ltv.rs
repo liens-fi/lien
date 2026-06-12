@@ -150,3 +150,62 @@ mod tests {
         assert!(matches!(decision, HookDecision::Reject(_)));
     }
 }
+
+#[cfg(test)]
+mod extra_tests {
+    use super::*;
+    use lien_hook_runtime::event::{
+        AdapterKind, LifecycleEvent, MarketSnapshot, PositionSnapshot,
+    };
+
+    fn evt(vol_bps: u32, ltv_bps: u16) -> LifecycleEvent {
+        LifecycleEvent {
+            kind: LifecycleEventKind::BeforeBorrow,
+            adapter: AdapterKind::Marginfi,
+            position: PositionSnapshot {
+                owner: [1; 32], collateral_mint: [2; 32], debt_mint: [3; 32],
+                collateral_amount: 1_000, debt_amount: 500,
+                ltv_bps, liquidation_threshold_bps: 8_000,
+            },
+            market: MarketSnapshot {
+                slot: 1, timestamp: 0, oracle_points: vec![],
+                realised_vol_bps: vol_bps, utilisation_bps: 5_000,
+            },
+            payload: vec![],
+        }
+    }
+
+    #[test]
+    fn min_ltv_clamps_at_extreme_volatility() {
+        let h = DynamicLtv::new(7_500, 50, 1_000, 2_500);
+        let e = evt(20_000, 2_000); // way past min floor
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        match h.evaluate(&ctx) {
+            HookDecision::AcceptWith(SideEffect::OverrideMaxLtvBps(v)) => assert_eq!(v, 2_500),
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
+    fn accepts_at_exact_cap() {
+        // At vol_bps = vol_floor: target = base. position ltv = base → accept.
+        let h = DynamicLtv::new(7_500, 50, 1_000, 2_500);
+        let e = evt(1_000, 7_500);
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        matches!(h.evaluate(&ctx), HookDecision::AcceptWith(_));
+    }
+
+    #[test]
+    fn zero_floor_treats_all_vol_as_excess() {
+        let h = DynamicLtv::new(7_500, 50, 0, 1_000);
+        let e = evt(2_000, 2_000);
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        match h.evaluate(&ctx) {
+            HookDecision::AcceptWith(SideEffect::OverrideMaxLtvBps(v)) => {
+                // 2000 / 100 * 50 = 1000; 7500 - 1000 = 6500
+                assert_eq!(v, 6_500);
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+}

@@ -127,5 +127,7 @@ export class ExecutorClient {
 
 // Lightweight discriminator helper used by integration tests.
 export function ixDiscriminator(name: string): Buffer {
-  return Buffer.from(utils.sha256.hash(`global:${name}`)).slice(0, 8);
+  // Anchor's instruction discriminator is the first 8 bytes of sha256("global:<name>").
+  // utils.sha256.hash returns a hex string, so we have to decode it before slicing.
+  return Buffer.from(utils.sha256.hash(`global:${name}`), "hex").subarray(0, 8);
 }

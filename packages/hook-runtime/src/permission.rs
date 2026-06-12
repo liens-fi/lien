@@ -86,3 +86,39 @@ mod tests {
         assert!(!gate.permits(&you));
     }
 }
+
+#[cfg(test)]
+mod extra_tests {
+    use super::*;
+
+    #[test]
+    fn gate_with_empty_initialiser_is_empty() {
+        let g = PermissionGate::new(std::iter::empty::<[u8; 32]>());
+        assert!(g.is_empty());
+        assert_eq!(g.len(), 0);
+        assert!(!g.permits(&[0u8; 32]));
+    }
+
+    #[test]
+    fn gate_with_multiple_addresses_accepts_each() {
+        let a = [1u8; 32];
+        let b = [2u8; 32];
+        let c = [3u8; 32];
+        let g = PermissionGate::new([a, b, c]);
+        assert_eq!(g.len(), 3);
+        assert!(g.permits(&a));
+        assert!(g.permits(&b));
+        assert!(g.permits(&c));
+        assert!(!g.permits(&[9u8; 32]));
+    }
+
+    #[test]
+    fn reputation_update_overwrites_previous_score() {
+        let rep = MemoryReputation::new();
+        let me = [7u8; 32];
+        rep.record(me, 3000, 2);
+        rep.record(me, 9000, 17);
+        assert_eq!(rep.score(&me), 9000);
+        assert_eq!(rep.repayment_count(&me), 17);
+    }
+}

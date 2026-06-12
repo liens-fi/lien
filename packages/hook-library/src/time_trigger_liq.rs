@@ -145,3 +145,59 @@ mod tests {
         ));
     }
 }
+
+#[cfg(test)]
+mod extra_tests {
+    use super::*;
+    use lien_hook_runtime::event::{
+        AdapterKind, LifecycleEvent, MarketSnapshot, OraclePoint, PositionSnapshot,
+    };
+
+    fn evt(kind: LifecycleEventKind, ts: i64) -> LifecycleEvent {
+        let slot = 100;
+        LifecycleEvent {
+            kind,
+            adapter: AdapterKind::Solend,
+            position: PositionSnapshot {
+                owner: [9; 32], collateral_mint: [2; 32], debt_mint: [3; 32],
+                collateral_amount: 1_000, debt_amount: 800,
+                ltv_bps: 8_000, liquidation_threshold_bps: 8_500,
+            },
+            market: MarketSnapshot {
+                slot, timestamp: ts,
+                oracle_points: vec![OraclePoint {
+                    mint: [2; 32], price_e8: 1_000, confidence_e8: 1, slot,
+                }],
+                realised_vol_bps: 0, utilisation_bps: 0,
+            },
+            payload: vec![],
+        }
+    }
+
+    #[test]
+    fn non_liquidate_event_passes_through() {
+        let h = TimeTriggerLiq::new(vec![], 500, 300);
+        let e = evt(LifecycleEventKind::BeforeBorrow, 0);
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        assert_eq!(h.evaluate(&ctx), HookDecision::Accept);
+    }
+
+    #[test]
+    fn accepts_inside_single_window() {
+        let h = TimeTriggerLiq::new(
+            vec![TimeWindow { start_sec: 36_000, end_sec: 64_800 }],
+            500, 300,
+        );
+        let e = evt(LifecycleEventKind::BeforeLiquidate, 40_000);
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        assert_eq!(h.evaluate(&ctx), HookDecision::Accept);
+    }
+
+    #[test]
+    fn accepts_when_window_list_empty() {
+        let h = TimeTriggerLiq::new(vec![], 500, 300);
+        let e = evt(LifecycleEventKind::BeforeLiquidate, 12_345);
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        assert_eq!(h.evaluate(&ctx), HookDecision::Accept);
+    }
+}

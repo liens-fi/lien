@@ -66,8 +66,8 @@ export class MarginfiAdapter implements LendingAdapter {
       (acc, bank) => acc + Number(bank.computeLiabilityUsdValue(bank.totalLiabilityShares, bank.config.liabilityWeightInit, "EQUITY", "STRICT")),
       0,
     );
-    return {
-      adapter: "marginfi",
+    const snapshot = {
+      adapter: "marginfi" as const,
       market: groupPubkey,
       totalAssetsUsd: totalAssets,
       totalLiabilitiesUsd: totalLiabilities,
@@ -81,8 +81,9 @@ export class MarginfiAdapter implements LendingAdapter {
         depositApyBps: Math.round(bank.computeInterestRates().lendingRate.toNumber() * 10_000),
         borrowApyBps: Math.round(bank.computeInterestRates().borrowingRate.toNumber() * 10_000),
       })),
-      _ = group,
-    } as PoolSnapshot;
+    } satisfies PoolSnapshot;
+    void group; // group is consumed via client.banks above
+    return snapshot;
   }
 
   /**

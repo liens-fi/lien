@@ -136,3 +136,50 @@ mod tests {
         assert!(matches!(h.evaluate(&ctx), HookDecision::Reject(_)));
     }
 }
+
+#[cfg(test)]
+mod extra_tests {
+    use super::*;
+    use lien_hook_runtime::event::{
+        AdapterKind, LifecycleEvent, MarketSnapshot, PositionSnapshot,
+    };
+
+    fn evt(kind: LifecycleEventKind, payload: Vec<u8>) -> LifecycleEvent {
+        LifecycleEvent {
+            kind, adapter: AdapterKind::Kamino,
+            position: PositionSnapshot {
+                owner: [9; 32], collateral_mint: [2; 32], debt_mint: [3; 32],
+                collateral_amount: 1_000, debt_amount: 900,
+                ltv_bps: 9_000, liquidation_threshold_bps: 8_500,
+            },
+            market: MarketSnapshot {
+                slot: 100, timestamp: 0, oracle_points: vec![],
+                realised_vol_bps: 0, utilisation_bps: 0,
+            },
+            payload,
+        }
+    }
+
+    #[test]
+    fn non_liquidate_event_passes() {
+        let h = AntiMevLiq::new(3, HashSet::new());
+        let e = evt(LifecycleEventKind::BeforeBorrow, vec![]);
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        assert_eq!(h.evaluate(&ctx), HookDecision::Accept);
+    }
+
+    #[test]
+    fn registered_keeper_is_allowed() {
+        let me = [1u8; 32];
+        let keepers: HashSet<[u8; 32]> = [me].into();
+        let h = AntiMevLiq::new(5, keepers);
+        let mut payload = vec![0u8; 32];
+        payload.copy_from_slice(&me);
+        let e = evt(LifecycleEventKind::BeforeLiquidate, payload);
+        let ctx = HookContext { event: &e, composition_index: 0, composition_total: 1 };
+        assert_eq!(
+            h.evaluate(&ctx),
+            HookDecision::AcceptWith(SideEffect::DelayLiquidationSlots(5)),
+        );
+    }
+}

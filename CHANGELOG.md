@@ -18,4 +18,4 @@ First public tag.
 
 ## Notes
 
-The executor program is not yet deployed to mainnet. The placeholder pubkey in `declare_id!` is replaced at deploy time. The `lien deploy` command only prints the deploy plan; the actual `anchor deploy` is operator-driven.
+The executor program is live on Solana devnet at `5yNMqcyZsGQJk4xvw4jjvoRBSnGs8mgramEa3HQe5faD` (deployed 2026-06-12). Mainnet deploy is operator-driven — `lien deploy --cluster mainnet` only prints the plan; the actual `anchor deploy` is run by a human after they confirm the keypair, balance, and cluster.
