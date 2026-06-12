@@ -14,7 +14,7 @@ repository = "https://github.com/liens-fi/lien"
 authors = ["LIEN contributors"]
 
 [workspace.dependencies]
-anchor-lang = "0.31.1"
+anchor-lang = "1.0.2"
 anchor-spl = "0.31.1"
 borsh = "0.10.3"
 thiserror = "1.0"
