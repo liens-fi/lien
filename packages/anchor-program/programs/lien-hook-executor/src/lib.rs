@@ -147,9 +147,23 @@ pub mod lien_hook_executor {
         let event_bit = 1u16 << event_kind;
         let mut would_run = 0u8;
         let mut would_skip = 0u8;
+        let now = Clock::get()?.unix_timestamp;
         for entry in &composition.entries {
             if entry.flags.bits & event_bit != 0 {
                 would_run = would_run.saturating_add(1);
+                // v0.1.3 — per-entry HookRan receipt for indexers / CLI / SDK.
+                emit!(HookRan {
+                    composition: composition.key(),
+                    pool: pool.key(),
+                    event_kind,
+                    hook_program: entry.hook_program,
+                    priority: entry.priority,
+                    flags_bits: entry.flags.bits,
+                    decision: 0,                // Accept (placeholder at executor layer)
+                    side_effect_kind: 0,         // none (hook program emits the actual side-effect)
+                    side_effect_payload: 0,
+                    timestamp: now,
+                });
             } else {
                 would_skip = would_skip.saturating_add(1);
             }
@@ -304,6 +318,27 @@ pub struct CompositionExecuted {
     pub adapter: u8,
     pub hook_count_eligible: u8,
     pub hook_count_skipped: u8,
+    pub timestamp: i64,
+}
+
+
+/// v0.1.3 — per-entry receipt. Emitted from inside run_composition for each
+/// entry whose declared flags cover the lifecycle event. The decision and
+/// side-effect fields are placeholders at this layer (the actual decision is
+/// returned by the hook program itself when invoked); they're populated as
+/// 0 = Accept / 0 = no side-effect by default so the receipt envelope is the
+/// shape downstream tooling (CLI / SDK / explorer indexers) can rely on.
+#[event]
+pub struct HookRan {
+    pub composition: Pubkey,
+    pub pool: Pubkey,
+    pub event_kind: u8,
+    pub hook_program: Pubkey,
+    pub priority: u16,
+    pub flags_bits: u16,
+    pub decision: u8,
+    pub side_effect_kind: u8,
+    pub side_effect_payload: u64,
     pub timestamp: i64,
 }
 
