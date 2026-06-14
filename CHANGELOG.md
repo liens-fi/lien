@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — mainnet patch
+
+- `install_composition` and `update_composition` now refuse compositions whose entries share a priority byte. Two entries silently colliding on the same fold position was an edge case the type system did not prevent. Added `HookExecutorError::DuplicatePriority` and a guard in both instruction handlers.
+- Mainnet program upgraded in place (same Program ID `5yNMqcyZsGQJk4xvw4jjvoRBSnGs8mgramEa3HQe5faD`). Upgrade signature `3AWddY7i9UYczUjN9PW8zgajmgT3Kr9hUbY2tcfpKmD8ugyAehbjwUDZDbgGriptbsvFBwFpAWHtdvykGzxLbijR`. .so grew from 265,256 to 267,256 bytes.
+- Hook Marketplace page is now open at liens.fi/marketplace alongside this upgrade.
+
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/) but written in plain prose because the project is small.
 
 ## 0.1.0 — 2026-06-12
