@@ -55,6 +55,14 @@ pub mod lien_hook_executor {
             HookExecutorError::TooManyHooks
         );
         require!(!entries.is_empty(), HookExecutorError::EmptyComposition);
+        // v0.1.1 — two compositions can't claim the same priority slot; the fold
+        // walks priorities in order and ambiguous ties were silently coalescing.
+        let mut seen = [false; (u8::MAX as usize) + 1];
+        for entry in &entries {
+            let p = entry.priority as usize;
+            require!(!seen[p], HookExecutorError::DuplicatePriority);
+            seen[p] = true;
+        }
         let pool = &mut ctx.accounts.pool;
         require_keys_eq!(
             pool.authority,
@@ -66,7 +74,7 @@ pub mod lien_hook_executor {
         composition.slot_index = slot_index;
         composition.entries = entries;
         composition.installed_at = Clock::get()?.unix_timestamp;
-        composition.bump = *ctx.bumps.get("composition").unwrap_or(&0);
+        composition.bump = ctx.bumps.composition;
         pool.composition_count = pool.composition_count.saturating_add(1);
         emit!(CompositionInstalled {
             pool: pool.key(),
@@ -87,6 +95,13 @@ pub mod lien_hook_executor {
             HookExecutorError::TooManyHooks
         );
         require!(!entries.is_empty(), HookExecutorError::EmptyComposition);
+        // v0.1.1 — same priority-uniqueness guard applied to updates.
+        let mut seen = [false; (u8::MAX as usize) + 1];
+        for entry in &entries {
+            let p = entry.priority as usize;
+            require!(!seen[p], HookExecutorError::DuplicatePriority);
+            seen[p] = true;
+        }
         let composition = &mut ctx.accounts.composition;
         require_keys_eq!(
             ctx.accounts.pool.authority,

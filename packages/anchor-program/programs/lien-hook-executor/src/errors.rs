@@ -31,4 +31,7 @@ pub enum HookExecutorError {
 
     #[msg("Manifest URI exceeds 200 bytes.")]
     ManifestUriTooLong,
+
+    #[msg("Composition entries must each carry a unique priority value.")]
+    DuplicatePriority,
 }
