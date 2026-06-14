@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 / 0.1.3 — per-entry HookRan receipt
+
+- `run_composition` now emits a `HookRan` event for every entry whose declared flags cover the lifecycle event (in addition to the existing `CompositionExecuted` aggregate). Fields: `composition`, `pool`, `event_kind`, `hook_program`, `priority`, `flags_bits`, `decision`, `side_effect_kind`, `side_effect_payload`, `timestamp`. Indexers and CLIs read this directly instead of having to decode hook-program-specific logs.
+- Mainnet program upgraded in place (same Program ID `5yNMqcyZsGQJk4xvw4jjvoRBSnGs8mgramEa3HQe5faD`). Upgrade signature `2YfSbXyVD8yYfXeJPCT3TQKzZkzpBJG7T31mAs5fNcWnQjSt3bFdWNCi8wjYNBPDFfoHYKFbpvvbC32sT3Ya4ZEi`. .so grew from 267,256 to 268,816 bytes.
+- `@liens/cli` 0.1.3 ships with HookRan decoding — `lien receipts --signature <tx>` prints both the aggregate and the per-entry list.
+
 ## 0.1.1 — mainnet patch
 
 - `install_composition` and `update_composition` now refuse compositions whose entries share a priority byte. Two entries silently colliding on the same fold position was an edge case the type system did not prevent. Added `HookExecutorError::DuplicatePriority` and a guard in both instruction handlers.
