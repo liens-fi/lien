@@ -19,20 +19,41 @@ interface ParsedReceipt {
   signature: string;
   slot: number;
   blockTime: number | null;
+  // CompositionExecuted (aggregate)
   event_kind?: number;
   hook_count_eligible?: number;
   hook_count_skipped?: number;
   composition?: string;
   pool?: string;
+  // HookRan entries (v0.1.3 — per eligible hook)
+  hook_runs?: Array<{
+    hook_program: string;
+    priority: number;
+    flags_bits: number;
+    decision: number;
+    side_effect_kind: number;
+    side_effect_payload: bigint;
+  }>;
 }
 
+// HookRan struct (v0.1.3, 8-byte discriminator prefix):
+// composition(32) + pool(32) + event_kind(u8) + hook_program(32) +
+// priority(u16) + flags_bits(u16) + decision(u8) + side_effect_kind(u8) +
+// side_effect_payload(u64) + timestamp(i64)
+// = 8 + 32 + 32 + 1 + 32 + 2 + 2 + 1 + 1 + 8 + 8 = 127 bytes
+const HOOK_RAN_LEN = 127;
+// CompositionExecuted struct:
+// composition(32) + pool(32) + event_kind(u8) + position_owner(32) +
+// adapter(u8) + hook_count_eligible(u8) + hook_count_skipped(u8) + timestamp(i64)
+// = 8 + 32 + 32 + 1 + 32 + 1 + 1 + 1 + 8 = 116 bytes
+const COMP_EXEC_LEN = 116;
+
 function parseExecutorLogs(logs: string[]): Partial<ParsedReceipt> {
-  // The executor emits a CompositionExecuted event via Anchor's `emit!`. Anchor
-  // prints "Program data: <base64>" lines for these. We don't decode the full
-  // borsh payload here — that's what @liens/sdk does. The CLI surface is a
-  // human-readable summary, so we look for the program log markers and pull
-  // the obvious bytes (event kind + counts) from the borsh prefix.
-  const out: Partial<ParsedReceipt> = {};
+  // The executor emits two events via Anchor's `emit!`: CompositionExecuted
+  // (aggregate, since v0.1.0) and HookRan (per eligible entry, since v0.1.3).
+  // Anchor prints them as "Program data: <base64>" lines. We pull both
+  // shapes off by length-matching; full borsh decode lives in @liens/sdk.
+  const out: Partial<ParsedReceipt> = { hook_runs: [] };
   for (const line of logs) {
     if (!line.includes("Program data:")) continue;
     const b64 = line.split("Program data:")[1]?.trim();
@@ -43,22 +64,53 @@ function parseExecutorLogs(logs: string[]): Partial<ParsedReceipt> {
     } catch {
       continue;
     }
-    // Anchor event layout: 8-byte discriminator + struct fields.
-    // CompositionExecuted: composition(32) + pool(32) + event_kind(u8) +
-    // position_owner(32) + adapter(u8) + hook_count_eligible(u8) +
-    // hook_count_skipped(u8) + timestamp(i64)
-    if (buf.length < 8 + 32 + 32 + 1 + 32 + 1 + 1 + 1) continue;
-    out.composition = new PublicKey(buf.subarray(8, 40)).toBase58();
-    out.pool = new PublicKey(buf.subarray(40, 72)).toBase58();
-    out.event_kind = buf[72];
-    // position_owner = bytes 73..105
-    // adapter = byte 105
-    out.hook_count_eligible = buf[106];
-    out.hook_count_skipped = buf[107];
-    break;
+    if (buf.length === COMP_EXEC_LEN) {
+      out.composition = new PublicKey(buf.subarray(8, 40)).toBase58();
+      out.pool = new PublicKey(buf.subarray(40, 72)).toBase58();
+      out.event_kind = buf[72];
+      out.hook_count_eligible = buf[106];
+      out.hook_count_skipped = buf[107];
+    } else if (buf.length === HOOK_RAN_LEN) {
+      const hookProgram = new PublicKey(buf.subarray(8 + 32 + 32 + 1, 8 + 32 + 32 + 1 + 32)).toBase58();
+      const off = 8 + 32 + 32 + 1 + 32;
+      const priority = buf.readUInt16LE(off);
+      const flags_bits = buf.readUInt16LE(off + 2);
+      const decision = buf[off + 4]!;
+      const side_effect_kind = buf[off + 5]!;
+      const side_effect_payload = buf.readBigUInt64LE(off + 6);
+      out.hook_runs!.push({
+        hook_program: hookProgram,
+        priority,
+        flags_bits,
+        decision,
+        side_effect_kind,
+        side_effect_payload,
+      });
+      // also fill composition / pool / event_kind from the first HookRan if
+      // CompositionExecuted is missing (older firmwares or partial logs).
+      if (!out.composition) {
+        out.composition = new PublicKey(buf.subarray(8, 40)).toBase58();
+        out.pool = new PublicKey(buf.subarray(40, 72)).toBase58();
+        out.event_kind = buf[72];
+      }
+    }
   }
   return out;
 }
+
+const DECISION_LABEL: Record<number, string> = {
+  0: "Accept",
+  1: "AcceptWith",
+  2: "Reject",
+};
+
+const SIDE_EFFECT_LABEL: Record<number, string> = {
+  0: "none",
+  1: "OverrideMaxLtvBps",
+  2: "DelayLiquidationSlots",
+  3: "OverrideRateBps",
+  4: "OpenHedge",
+};
 
 export function receiptsCommand(): Command {
   return new Command("receipts")
@@ -117,12 +169,29 @@ export function receiptsCommand(): Command {
         );
         console.log(`  pool            ${receipt.pool ?? "?"}`);
         console.log(`  composition     ${receipt.composition ?? "?"}`);
-        console.log(`  hooks eligible  ${receipt.hook_count_eligible ?? "?"}`);
-        console.log(`  hooks skipped   ${receipt.hook_count_skipped ?? "?"}`);
+        if (receipt.hook_count_eligible !== undefined) {
+          console.log(`  hooks eligible  ${receipt.hook_count_eligible}`);
+          console.log(`  hooks skipped   ${receipt.hook_count_skipped}`);
+        }
+        if (receipt.hook_runs && receipt.hook_runs.length > 0) {
+          console.log("");
+          console.log(kleur.bold(`  HookRan entries (v0.1.3) — ${receipt.hook_runs.length} eligible:`));
+          for (const [i, hr] of receipt.hook_runs.entries()) {
+            console.log(`    [${i}] hook_program     ${hr.hook_program}`);
+            console.log(`        priority          ${hr.priority}`);
+            console.log(`        flags_bits        0x${hr.flags_bits.toString(16).padStart(4, "0")}`);
+            console.log(
+              `        decision          ${DECISION_LABEL[hr.decision] ?? "?"} (${hr.decision})`,
+            );
+            console.log(
+              `        side_effect       ${SIDE_EFFECT_LABEL[hr.side_effect_kind] ?? "?"} payload=${hr.side_effect_payload}`,
+            );
+          }
+        }
       } else {
         console.log(
           kleur.dim(
-            "  (no CompositionExecuted event in this transaction — was the signature an executor call?)",
+            "  (no CompositionExecuted / HookRan event in this transaction — was the signature an executor call?)",
           ),
         );
       }
